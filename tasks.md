@@ -18,31 +18,31 @@
 ---
 
 ## Phase 2: BLE Discovery Radar & Node Detection
-- [ ] Implement `BleScanner` with strict filters (Service UUID `...90AB` and `"LoRa Node"` prefix)
-- [ ] Implement signal strength (RSSI) smoothing & categorization
-- [ ] Build `NodeScannerBottomSheet` with scanning pulse animation & node list
-- [ ] Add Mock/Simulated Node toggle for offline development without physical hardware
-- [ ] **Human Verification Gate:** Deploy to phone & view live scanning radar discovering nodes
+- [x] Implement `BleScanner` with strict filters (Service UUID `...90AB` and `"LoRa Node"` prefix)
+- [x] Implement signal strength (RSSI) smoothing & categorization
+- [x] Build `NodeScannerBottomSheet` with scanning pulse animation & node list
+- [x] Add Mock/Simulated Node toggle for offline development without physical hardware
+- [x] **Human Verification Gate:** Deploy to phone & view live scanning radar discovering nodes
 
 ---
 
 ## Phase 3: Sequential GATT Engine & Connection HUD
-- [ ] Implement atomic `GattCommandQueue` (FIFO with 5s watchdog timeout to prevent GATT 133)
-- [ ] Implement `BleGattManager` (Connect, MTU negotiation to 247 bytes, Service discovery)
-- [ ] Subscribe to TX Characteristic notifications (`...90AD`) with CCCD descriptor write
-- [ ] Integrate live connection status transitions into top Node HUD
-- [ ] Implement clean disconnect and link recovery state machine
-- [ ] **Human Verification Gate:** Deploy to phone & 1-tap connect to ESP32 / view MTU & connection status
+- [x] Implement atomic `GattCommandQueue` (FIFO with 5s watchdog timeout to prevent GATT 133)
+- [x] Implement `BleGattManager` (Connect, MTU negotiation to 247 bytes, Service discovery)
+- [x] Subscribe to TX Characteristic notifications (`...90AD`) with CCCD descriptor write
+- [x] Integrate live connection status transitions into top Node HUD
+- [x] Implement clean disconnect and link recovery state machine
+- [x] **Human Verification Gate:** Deploy to phone & 1-tap connect to ESP32 / view MTU & connection status
 
 ---
 
 ## Phase 4: Bi-Directional Messaging & Disaster Broadcast Dashboard
-- [ ] Implement outbound message transmitter (Write to RX Characteristic `...90AC` in UTF-8)
-- [ ] Implement inbound notification listener (Handle TX Characteristic notifications)
-- [ ] Build Chat Bubble UI with 3-stage delivery status indicators
-- [ ] Add 1-tap Emergency SOS broadcast presets (`[🚨 Medical Aid]`, `[⚠️ Rescue Needed]`, `[✅ Safe]`)
-- [ ] Implement haptic vibration alerts for incoming LoRa messages
-- [ ] **Human Verification Gate:** Deploy to phone & send/receive live text messages with ESP32
+- [x] Implement outbound message transmitter (Write to RX Characteristic `...90AC` in UTF-8)
+- [x] Implement inbound notification listener (Handle TX Characteristic notifications)
+- [x] Build Chat Bubble UI with 3-stage delivery status indicators
+- [x] Add 1-tap Emergency SOS broadcast presets (`[🚨 Medical Aid]`, `[⚠️ Rescue Needed]`, `[✅ Safe]`)
+- [x] Implement haptic vibration alerts for incoming LoRa messages
+- [x] **Human Verification Gate:** Deploy to phone & send/receive live text messages with ESP32
 
 ---
 
