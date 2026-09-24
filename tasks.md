@@ -9,11 +9,11 @@
 ## Phase 1: Disaster UI Shell & Dynamic Permissions Gate
 - [x] Create Android Compose project structure & Git repository
 - [x] Configure build environment, JDK 17, and Android CLI
-- [ ] Configure Android 12-15 Bluetooth & Notification permissions in Manifest
-- [ ] Build Emergency Node HUD (Connection status badge, LoRa channel indicator)
-- [ ] Build Permissions Request Rationale card in Compose
-- [ ] Build Chat Timeline & Message Input Bar shell
-- [ ] **Human Verification Gate:** Deploy to phone & verify UI shell + runtime permissions prompt
+- [x] Configure Android 12-15 Bluetooth & Notification permissions in Manifest
+- [x] Build Emergency Node HUD (Connection status badge, LoRa channel indicator)
+- [x] Build Permissions Request Rationale card in Compose
+- [x] Build Chat Timeline & Message Input Bar shell
+- [x] **Human Verification Gate:** Deploy to phone & verify UI shell + runtime permissions prompt
 
 ---
 
