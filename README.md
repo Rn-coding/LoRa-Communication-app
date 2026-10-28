@@ -2,11 +2,7 @@
 
 An Android MVP that bridges a phone to an ESP32 LoRa relay over Bluetooth Low Energy. It provides a high-contrast emergency chat, BLE node discovery, serialized GATT setup, offline message history, and a foreground keepalive for receiving messages while the screen is locked.
 
-## Current status
-
-Phases 1–5 are implemented in the repository. The app builds with the Android Gradle plugin, Kotlin, Compose, Room, and KSP. The remaining Phase 5 checklist item is physical lock-screen verification; Android install confirmation must be approved on the connected phone before that walkthrough can be completed.
-
-Implemented capabilities:
+## Features
 
 - Android 12+ Nearby Devices and notification permission gate.
 - BLE scan radar with RSSI smoothing, signal categories, and a 12-second scan window.
@@ -18,7 +14,7 @@ Implemented capabilities:
 - `connectedDevice` foreground service with persistent status and lock-screen incoming-message alerts.
 - Exponential reconnect delays of 1, 2, 4, 8, 16, then 30 seconds.
 
-The implementation-level backend and service topology is documented in [ARCHITECTURE.md](ARCHITECTURE.md), and the milestone checklist is in [tasks.md](tasks.md).
+The backend and service topology is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Requirements
 
@@ -45,7 +41,7 @@ Using the Android CLI:
 & 'C:\Users\rehan\AppData\AndroidCLI\android.exe' run
 ```
 
-If Android reports `INSTALL_FAILED_USER_RESTRICTED`, unlock the phone and approve the install confirmation, then rerun the command.
+If Android displays an install confirmation, approve it on the device and rerun the command if necessary.
 
 ## Demo walkthrough
 

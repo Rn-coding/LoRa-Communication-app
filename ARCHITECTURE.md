@@ -1,13 +1,11 @@
 # Architecture Specification: Dual-Tier Smartphone-to-LoRa Transceiver Relay Framework
 
-**Document Version:** 1.1.0-MVP-IMPLEMENTED
-**Author:** Senior Research Engineer  
 **Scope:** Android Mobile Application & Hardware Abstraction Boundary  
 **Target Environment:** Android 8.0+ (API 26) through Android 15 (API 35+)
 
-> **Implementation status (Phase 5):** The Android MVP is implemented through the offline-persistence and foreground-keepalive phase. The sections below retain the original hardware contract and design rationale, while this section records what is actually present in the repository today.
+> This document describes the implemented Android application architecture and its hardware boundary. The hardware contract and design rationale are retained alongside the runtime component details.
 
-## 0. Current Backend and Service State
+## 0. Runtime Architecture
 
 ### 0.1 Runtime topology
 
@@ -35,7 +33,7 @@ BleRelayForegroundService (connectedDevice)
 
 ### 0.2 Implemented backend components
 
-| Component | Current responsibility | Source |
+| Component | Responsibility | Source |
 |---|---|---|
 | `BleScanner` | Scans with low latency for up to 12 seconds, accepts the bridge service UUID or `LoRa Node`/`ESP32` names, and emits deduplicated candidates to the ViewModel. | `data/ble/BleScanner.kt` |
 | `GattCommandQueue` | Serializes every asynchronous GATT transaction through one active command and fails a transaction after 5 seconds. | `data/ble/GattCommandQueue.kt` |
@@ -44,7 +42,7 @@ BleRelayForegroundService (connectedDevice)
 | `AppDatabase` / `MessageDao` | Room database named `lora-messenger.db`; stores every outgoing and incoming message and updates delivery status. | `data/db/` |
 | `BleRelayForegroundService` | Declares `connectedDevice`, maintains the shared manager, shows an ongoing relay notification, and posts high-priority vibrating notifications for incoming payloads. | `service/BleRelayForegroundService.kt` |
 
-### 0.3 Current state and persistence flow
+### 0.3 Persistence flow
 
 `RelayViewModel` observes `MessageDao.observeAll()` as a `StateFlow`, so the chat timeline is rebuilt from SQLite after process or activity recreation. Outgoing messages are inserted as `QUEUED`, then updated to `SENT_TO_NODE` after the GATT write callback and `AIR_TRANSMITTED` after the MVP's local transmission step. Incoming TX notifications are inserted as received messages and are consumed by both the UI and foreground service.
 
@@ -54,12 +52,11 @@ The simulated node (`LoRa Node 1 (Simulated)`) uses the same ViewModel and messa
 
 An unexpected physical GATT disconnect schedules a reconnect through the same serialized manager. Delays are `1s`, `2s`, `4s`, `8s`, `16s`, then capped at `30s`; an explicit user disconnect cancels the retry job. The foreground service is started when a node is selected and remains the owner-facing keepalive while the app is backgrounded.
 
-### 0.5 MVP boundaries
+### 0.5 Protocol and persistence boundaries
 
 * The implemented hardware wire mode is raw UTF-8 text. The structured `0xEA`/`0xEB` frame format described later remains a production contract, not an active serializer/parser in this MVP.
 * Room persistence is durable, but schema migrations, message export/search, and remote ACK reconciliation are reserved for a later production iteration.
 * `AIR_TRANSMITTED` is currently the UI's post-write MVP state; a firmware `TX_DONE` notification is not yet parsed into a separate authoritative state.
-* The remaining Phase 5 human gate is physical lock-screen/background verification on a device with Android install confirmation enabled.
 
 ---
 
@@ -100,8 +97,6 @@ This project implements a **Dual-Tier Heterogeneous Relay Framework**:
 │                                 TIER-1: LOCAL ACCESS                                   │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
-
----
 
 ## 2. Research-Level Challenges & Mitigation Strategies
 
@@ -333,38 +328,3 @@ Disaster environments are physically dynamic: the user may walk out of range of 
     └───────────────┘             (Exponential Backoff Reconnect)
 ```
 
----
-
-## 7. Step-Wise Modular Implementation Plan
-
-```
-[Phase 1: Foundations] ──► [Phase 2: GATT Core] ──► [Phase 3: Protocol & Data] ──► [Phase 4: UI & E2E Testing]
-```
-
-### Phase 1: Foundations & Architecture Baseline (Current Milestone)
-*   Finalize `ARCHITECTURE.md` and Hardware Interface Contract.
-*   Configure permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `POST_NOTIFICATIONS`, `FOREGROUND_SERVICE`).
-*   Establish dependency setup in `libs.versions.toml` (Room, ViewModel Compose, Coroutines).
-
-### Phase 2: BLE HAL & Sequential GATT Engine
-*   Implement `BleScanner` with strict filters (matching Service UUID or Device Name prefix `LoRa Node`).
-*   Implement the `GattCommandQueue` to serialize all GATT operations.
-*   Implement `BleGattManager` handling:
-    *   Connection lifecycle.
-    *   MTU negotiation (247+ bytes).
-    *   Service & Characteristic discovery.
-    *   CCCD notification subscription on TX Characteristic.
-    *   Exponential backoff reconnection watchdog.
-
-### Phase 3: Binary Framing, SAR, and Domain Layer
-*   Implement Packet Serializer/Deserializer (supporting both Raw Mode and Structured Frame Mode).
-*   Implement Local Message Repository (Room DB / Flow) with message state tracking (`PENDING`, `BLE_SENT`, `AIR_TRANSMITTED`, `RECEIVED`).
-*   Implement `BleRelayForegroundService` to keep GATT connection alive in background.
-
-### Phase 4: Jetpack Compose Interface & System Integration
-*   Build the Disaster Dashboard:
-    *   Node connection status banner (Connected / Disconnected / Reconnecting).
-    *   Signal indicators (BLE RSSI & Remote LoRa RSSI/SNR).
-    *   Interactive chat stream with delivered/pending checkmarks.
-    *   Quick Broadcast SOS template buttons ("Emergency at Location", "Request Medical Aid", "I am Safe").
-*   End-to-end testing with physical hardware and ADB.
