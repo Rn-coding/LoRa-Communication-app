@@ -16,6 +16,7 @@ import com.example.loramessenger.domain.LinkPhase
 import com.example.loramessenger.domain.LinkState
 import com.example.loramessenger.domain.RelayNode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +34,8 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
   private var rxCharacteristic: BluetoothGattCharacteristic? = null
   private var simulated = false
   private var shouldReconnect = false
+  private var reconnectAttempt = 0
+  private var reconnectJob: Job? = null
 
   private val _linkState = MutableStateFlow(LinkState())
   val linkState: StateFlow<LinkState> = _linkState.asStateFlow()
@@ -44,7 +47,13 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
     connectedNode = node
     simulated = node.isSimulated
     shouldReconnect = true
+    reconnectAttempt = 0
     if (simulated) { connectSimulated(node); return }
+    connectTransport(node)
+  }
+
+  private suspend fun connectTransport(node: RelayNode) {
+    if (!shouldReconnect) return
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
       _linkState.value = LinkState(LinkPhase.ERROR, node.name, detail = "Bluetooth connection permission is not granted")
       return
@@ -56,19 +65,22 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
       queue.enqueue("connect") { device.connectGatt(context, false, callback).also { gatt = it } != null }
     } catch (error: Exception) {
       _linkState.value = LinkState(LinkPhase.ERROR, node.name, detail = error.message)
+      scheduleReconnect(node)
     }
   }
 
   suspend fun disconnect() {
     shouldReconnect = false
+    reconnectJob?.cancel()
+    reconnectJob = null
     if (simulated) {
       simulated = false
       connectedNode = null
       _linkState.value = LinkState()
       return
     }
-    val activeGatt = gatt ?: return
-    queue.enqueueImmediate { activeGatt.disconnect(); activeGatt.close() }
+    val activeGatt = gatt
+    if (activeGatt != null) queue.enqueueImmediate { activeGatt.disconnect(); activeGatt.close() }
     gatt = null; txCharacteristic = null; rxCharacteristic = null; connectedNode = null
     _linkState.value = LinkState()
   }
@@ -131,12 +143,12 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
     override fun onConnectionStateChange(callbackGatt: BluetoothGatt, status: Int, newState: Int) {
       val success = status == BluetoothGatt.GATT_SUCCESS
       queue.complete(success)
-      if (success && newState == BluetoothProfile.STATE_CONNECTED) requestMtu()
+      if (success && newState == BluetoothProfile.STATE_CONNECTED) { reconnectAttempt = 0; requestMtu() }
       else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
         val node = connectedNode
         gatt = null; txCharacteristic = null; rxCharacteristic = null
         _linkState.value = LinkState(LinkPhase.DISCONNECTED, connectedNode?.name, detail = if (status == BluetoothGatt.GATT_SUCCESS) null else "GATT error $status")
-        if (shouldReconnect && node != null && !node.isSimulated) scope.launch { delay(1_000); connect(node) }
+        if (shouldReconnect && node != null && !node.isSimulated) scheduleReconnect(node)
       }
     }
 
@@ -160,6 +172,18 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
     @Deprecated("Called on Android 12 and lower")
     @Suppress("DEPRECATION")
     override fun onCharacteristicChanged(callbackGatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) { if (characteristic.uuid == BleContract.TX_UUID) _incoming.tryEmit(characteristic.value?.toString(Charsets.UTF_8).orEmpty()) }
+  }
+
+  private fun scheduleReconnect(node: RelayNode) {
+    if (!shouldReconnect || node.isSimulated || reconnectJob?.isActive == true) return
+    val delayMs = minOf(30_000L, 1_000L shl reconnectAttempt.coerceAtMost(4))
+    reconnectAttempt = (reconnectAttempt + 1).coerceAtMost(30)
+    _linkState.value = LinkState(LinkPhase.CONNECTING, node.name, detail = "Retrying in ${delayMs / 1_000}s")
+    reconnectJob = scope.launch {
+      delay(delayMs)
+      reconnectJob = null
+      connectTransport(node)
+    }
   }
 
   @Suppress("DEPRECATION")

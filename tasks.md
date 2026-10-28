@@ -47,7 +47,7 @@
 ---
 
 ## Phase 5: Resilience, Offline Persistence & Foreground Keepalive
-- [ ] Implement Room SQLite database for persistent offline message storage
-- [ ] Implement `BleRelayForegroundService` to preserve BLE link when screen is locked
-- [ ] Implement exponential backoff auto-reconnection watchdog
+- [x] Implement Room SQLite database for persistent offline message storage
+- [x] Implement `BleRelayForegroundService` to preserve BLE link when screen is locked
+- [x] Implement exponential backoff auto-reconnection watchdog
 - [ ] **Human Verification Gate:** Lock phone, test background message reception, test auto-reconnect
