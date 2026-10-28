@@ -1,9 +1,65 @@
 # Architecture Specification: Dual-Tier Smartphone-to-LoRa Transceiver Relay Framework
 
-**Document Version:** 1.0.0-PROPOSED  
+**Document Version:** 1.1.0-MVP-IMPLEMENTED
 **Author:** Senior Research Engineer  
 **Scope:** Android Mobile Application & Hardware Abstraction Boundary  
 **Target Environment:** Android 8.0+ (API 26) through Android 15 (API 35+)
+
+> **Implementation status (Phase 5):** The Android MVP is implemented through the offline-persistence and foreground-keepalive phase. The sections below retain the original hardware contract and design rationale, while this section records what is actually present in the repository today.
+
+## 0. Current Backend and Service State
+
+### 0.1 Runtime topology
+
+```text
+Compose MainScreen
+      │ intents/state
+      ▼
+RelayViewModel ───────────────► Room AppDatabase (SQLite)
+      │                              │
+      │ shared process runtime       └─ MessageDao / MessageEntity
+      ▼
+BleRelayRuntime
+      │
+      ├── BleScanner ──► BluetoothLeScanner (12 s low-latency scan)
+      └── BleGattManager
+             │
+             └── GattCommandQueue (Channel + Mutex + 5 s watchdog)
+                         │
+                         ▼
+                    Android BluetoothGatt
+
+BleRelayForegroundService (connectedDevice)
+      └── uses the same BleRelayRuntime and posts lock-screen alerts
+```
+
+### 0.2 Implemented backend components
+
+| Component | Current responsibility | Source |
+|---|---|---|
+| `BleScanner` | Scans with low latency for up to 12 seconds, accepts the bridge service UUID or `LoRa Node`/`ESP32` names, and emits deduplicated candidates to the ViewModel. | `data/ble/BleScanner.kt` |
+| `GattCommandQueue` | Serializes every asynchronous GATT transaction through one active command and fails a transaction after 5 seconds. | `data/ble/GattCommandQueue.kt` |
+| `BleGattManager` | Owns GATT lifecycle, requests MTU 247 before discovery, discovers the contract service, enables TX notifications by writing the CCCD, writes UTF-8 RX payloads, emits TX payloads, and reconnects after unexpected drops. | `data/ble/BleGattManager.kt` |
+| `BleRelayRuntime` | Process-scoped manager shared by UI and foreground service, so screen locking does not create a second GATT client. | `data/ble/BleRelayRuntime.kt` |
+| `AppDatabase` / `MessageDao` | Room database named `lora-messenger.db`; stores every outgoing and incoming message and updates delivery status. | `data/db/` |
+| `BleRelayForegroundService` | Declares `connectedDevice`, maintains the shared manager, shows an ongoing relay notification, and posts high-priority vibrating notifications for incoming payloads. | `service/BleRelayForegroundService.kt` |
+
+### 0.3 Current state and persistence flow
+
+`RelayViewModel` observes `MessageDao.observeAll()` as a `StateFlow`, so the chat timeline is rebuilt from SQLite after process or activity recreation. Outgoing messages are inserted as `QUEUED`, then updated to `SENT_TO_NODE` after the GATT write callback and `AIR_TRANSMITTED` after the MVP's local transmission step. Incoming TX notifications are inserted as received messages and are consumed by both the UI and foreground service.
+
+The simulated node (`LoRa Node 1 (Simulated)`) uses the same ViewModel and message database path as physical hardware. Its connection sequence presents the same connecting, MTU, discovery, notification, and ready states, and it emits an automatic echo response for offline testing.
+
+### 0.4 Reconnection and lifecycle behavior
+
+An unexpected physical GATT disconnect schedules a reconnect through the same serialized manager. Delays are `1s`, `2s`, `4s`, `8s`, `16s`, then capped at `30s`; an explicit user disconnect cancels the retry job. The foreground service is started when a node is selected and remains the owner-facing keepalive while the app is backgrounded.
+
+### 0.5 MVP boundaries
+
+* The implemented hardware wire mode is raw UTF-8 text. The structured `0xEA`/`0xEB` frame format described later remains a production contract, not an active serializer/parser in this MVP.
+* Room persistence is durable, but schema migrations, message export/search, and remote ACK reconciliation are reserved for a later production iteration.
+* `AIR_TRANSMITTED` is currently the UI's post-write MVP state; a firmware `TX_DONE` notification is not yet parsed into a separate authoritative state.
+* The remaining Phase 5 human gate is physical lock-screen/background verification on a device with Android install confirmation enabled.
 
 ---
 
