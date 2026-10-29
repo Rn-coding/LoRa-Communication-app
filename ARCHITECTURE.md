@@ -40,6 +40,7 @@ BleRelayForegroundService (connectedDevice)
 | `BleGattManager` | Owns GATT lifecycle, requests MTU 247 before discovery, discovers the contract service, enables TX notifications by writing the CCCD, writes UTF-8 RX payloads, emits TX payloads, and reconnects after unexpected drops. | `data/ble/BleGattManager.kt` |
 | `BleRelayRuntime` | Process-scoped manager shared by UI and foreground service, so screen locking does not create a second GATT client. | `data/ble/BleRelayRuntime.kt` |
 | `AppDatabase` / `MessageDao` | Room database named `lora-messenger.db`; stores every outgoing and incoming message and updates delivery status. | `data/db/` |
+| `ResearchProtocol` / experiment DAO | Sends canonical structured JSON without local compression, parses node candidate telemetry, and persists experiment records for CSV export. | `data/research/`, `data/db/`, `data/export/` |
 | `BleRelayForegroundService` | Declares `connectedDevice`, maintains the shared manager, shows an ongoing relay notification, and posts high-priority vibrating notifications for incoming payloads. | `service/BleRelayForegroundService.kt` |
 
 ### 0.3 Persistence flow

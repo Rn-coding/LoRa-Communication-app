@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import com.example.loramessenger.domain.LinkPhase
 import com.example.loramessenger.domain.LinkState
 import com.example.loramessenger.domain.RelayNode
+import com.example.loramessenger.data.research.ResearchProtocol
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -88,7 +89,10 @@ class BleGattManager(private val context: Context, private val scope: CoroutineS
   suspend fun send(text: String): Boolean {
     if (_linkState.value.phase != LinkPhase.READY) return false
     if (simulated) {
-      scope.launch { delay(700); _incoming.emit("Echo from LoRa Node 1: $text") }
+      scope.launch {
+        delay(if (ResearchProtocol.isResearchRequest(text)) 800 else 700)
+        _incoming.emit(if (ResearchProtocol.isResearchRequest(text)) ResearchProtocol.simulateResponse(text) else "Echo from LoRa Node 1: $text")
+      }
       return true
     }
     val characteristic = rxCharacteristic ?: return false

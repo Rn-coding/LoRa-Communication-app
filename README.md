@@ -13,6 +13,7 @@ An Android MVP that bridges a phone to an ESP32 LoRa relay over Bluetooth Low En
 - Room-backed message history that survives process restarts.
 - `connectedDevice` foreground service with persistent status and lock-screen incoming-message alerts.
 - Exponential reconnect delays of 1, 2, 4, 8, 16, then 30 seconds.
+- Research Mode for canonical emergency reports, RF experiment parameters, representation candidates, airtime estimates, and CSV export.
 
 The backend and service topology is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 

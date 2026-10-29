@@ -51,6 +51,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,7 +86,22 @@ fun MainScreen(onItemClick: (NavKey) -> Unit, modifier: Modifier = Modifier, vie
   var granted by remember { mutableStateOf(permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }) }
   val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> granted = permissions.all { result[it] == true || ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED } }
   if (!granted) PermissionFallbackCard(modifier) { launcher.launch(permissions.toTypedArray()) }
-  else RelayMessenger(modifier, viewModel)
+  else ResearchTabs(modifier, viewModel)
+}
+
+@Composable
+private fun ResearchTabs(modifier: Modifier, viewModel: RelayViewModel) {
+  var selected by remember { mutableStateOf(0) }
+  Column(modifier.fillMaxSize()) {
+    PrimaryTabRow(selectedTabIndex = selected) {
+      Tab(selected == 0, onClick = { selected = 0 }, text = { Text("Disaster Chat") })
+      Tab(selected == 1, onClick = { selected = 1 }, text = { Text("Research Mode") })
+    }
+    Box(Modifier.weight(1f).fillMaxWidth()) {
+      if (selected == 0) RelayMessenger(Modifier.fillMaxSize().padding(horizontal = 16.dp), viewModel)
+      else ResearchScreen(Modifier.fillMaxSize().padding(horizontal = 16.dp), viewModel)
+    }
+  }
 }
 
 private fun requiredPermissions(): List<String> = buildList {
